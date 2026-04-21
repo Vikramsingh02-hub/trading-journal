@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Vikram Journal — Your Trading Memory</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #f8f7f4;
+    --surface: #ffffff;
+    --border: #e8e5df;
+    --border2: #d4d0c8;
+    --text: #1a1a18;
+    --muted: #6b6860;
+    --hint: #9e9b94;
+    --green: #0a6640;
+    --green-bg: #e8f5ee;
+    --red: #8b1f1f;
+    --red-bg: #fdf0f0;
+    --blue: #0d4f8a;
+    --blue-bg: #edf4fd;
+    --amber: #7a4800;
+    --amber-bg: #fef7e8;
+    --radius: 10px;
+    --radius-sm: 6px;
+  }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); font-size: 14px; line-height: 1.6; min-height: 100vh; }
+  .topbar { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 24px; display: flex; align-items: center; justify-content: space-between; height: 56px; position: sticky; top: 0; z-index: 100; }
+  .logo { font-size: 17px; font-weight: 600; color: var(--text); letter-spacing: -0.3px; }
+  .logo span { color: var(--green); }
+  .cap-display { font-size: 13px; color: var(--muted); }
+  .cap-display strong { color: var(--text); font-size: 15px; }
+  .tabs { display: flex; gap: 0; border-bottom: 1px solid var(--border); background: var(--surface); padding: 0 24px; }
+  .tab { padding: 12px 20px; font-size: 13px; font-weight: 500; color: var(--muted); border: none; background: none; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; transition: all 0.15s; }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--green); border-bottom-color: var(--green); }
+  .main { max-width: 860px; margin: 0 auto; padding: 24px 16px; }
+  .section { display: none; }
+  .section.active { display: block; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; margin-bottom: 16px; }
+  .card-title { font-size: 13px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 14px; }
+  .upload-zone { border: 2px dashed var(--border2); border-radius: var(--radius); padding: 36px; text-align: center; cursor: pointer; transition: all 0.2s; background: var(--bg); }
+  .upload-zone:hover { border-color: var(--green); background: var(--green-bg); }
+  .upload-icon { font-size: 36px; margin-bottom: 10px; }
+  .upload-title { font-size: 15px; font-weight: 600; margin-bottom: 6px; }
+  .upload-sub { font-size: 13px; color: var(--muted); }
+  #fileInput { display: none; }
+  .preview-img { max-width: 100%; max-height: 200px; border-radius: var(--radius-sm); object-fit: contain; display: block; margin: 0 auto 12px; border: 1px solid var(--border); }
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .form-group { display: flex; flex-direction: column; gap: 5px; }
+  .form-group.full { grid-column: 1 / -1; }
+  label { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+  input[type="text"], input[type="number"], input[type="date"], input[type="password"], select, textarea {
+    width: 100%; padding: 9px 12px; border: 1px solid var(--border2); border-radius: var(--radius-sm);
+    font-size: 14px; color: var(--text); background: var(--surface); font-family: inherit; transition: border 0.15s;
+  }
+  input:focus, select:focus, textarea:focus { outline: none; border-color: var(--green); }
+  textarea { resize: vertical; min-height: 80px; }
+  .btn { display: inline-flex; align-items: center; gap: 6px; padding: 9px 18px; border-radius: var(--radius-sm); font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; transition: all 0.15s; border: 1px solid transparent; }
+  .btn-primary { background: var(--green); color: #fff; border-color: var(--green); }
+  .btn-primary:hover { opacity: 0.88; }
+  .btn-secondary { background: var(--surface); color: var(--text); border-color: var(--border2); }
+  .btn-secondary:hover { background: var(--bg); }
+  .btn-danger { background: var(--surface); color: var(--red); border-color: #e8b4b4; }
+  .btn-danger:hover { background: var(--red-bg); }
+  .btn-full { width: 100%; justify-content: center; }
+  .pill { display: inline-flex; align-items: center; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+  .pill-win { background: var(--green-bg); color: var(--green); }
+  .pill-loss { background: var(--red-bg); color: var(--red); }
+  .pill-open { background: var(--blue-bg); color: var(--blue); }
+  .pill-yes { background: var(--green-bg); color: var(--green); }
+  .pill-no { background: var(--red-bg); color: var(--red); }
+  .pill-partial { background: var(--amber-bg); color: var(--amber); }
+  .pill-long { background: var(--blue-bg); color: var(--blue); }
+  .pill-short { background: var(--amber-bg); color: var(--amber); }
+  .toggle-group { display: flex; gap: 8px; flex-wrap: wrap; }
+  .toggle-btn { padding: 7px 16px; border: 1px solid var(--border2); border-radius: 20px; font-size: 13px; font-weight: 500; cursor: pointer; background: var(--surface); color: var(--muted); font-family: inherit; transition: all 0.15s; }
+  .toggle-btn:hover { border-color: var(--green); color: var(--green); }
+  .toggle-btn.sel-win, .toggle-btn.sel-yes { background: var(--green-bg); color: var(--green); border-color: var(--green); }
+  .toggle-btn.sel-loss, .toggle-btn.sel-no { background: var(--red-bg); color: var(--red); border-color: var(--red); }
+  .toggle-btn.sel-open { background: var(--blue-bg); color: var(--blue); border-color: var(--blue); }
+  .toggle-btn.sel-partial { background: var(--amber-bg); color: var(--amber); border-color: var(--amber); }
+  .ai-badge { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: var(--blue); background: var(--blue-bg); padding: 5px 12px; border-radius: 20px; margin-bottom: 14px; }
+  .spinner { width: 28px; height: 28px; border: 2.5px solid var(--border2); border-top-color: var(--green); border-radius: 50%; animation: spin 0.75s linear infinite; margin: 0 auto 10px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-box { text-align: center; padding: 28px; }
+  .metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 16px; }
+  .metric { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; }
+  .metric-label { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; }
+  .metric-value { font-size: 22px; font-weight: 700; color: var(--text); }
+  .metric-value.green { color: var(--green); }
+  .metric-value.red { color: var(--red); }
+  .trade-table { width: 100%; border-collapse: collapse; }
+  .trade-table th { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; padding: 8px 10px; text-align: left; border-bottom: 1px solid var(--border); }
+  .trade-table td { padding: 11px 10px; border-bottom: 1px solid var(--border); font-size: 13px; vertical-align: middle; }
+  .trade-table tr:last-child td { border-bottom: none; }
+  .trade-table tr:hover td { background: var(--bg); }
+  .del-btn { background: none; border: none; cursor: pointer; color: var(--hint); font-size: 14px; padding: 4px 6px; border-radius: 4px; }
+  .del-btn:hover { color: var(--red); background: var(--red-bg); }
+  .empty { text-align: center; padding: 40px; color: var(--muted); font-size: 14px; }
+  .divider { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
+  .btn-row { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
+  .api-row { display: flex; gap: 8px; }
+  .api-row input { flex: 1; font-family: monospace; font-size: 12px; }
+  .api-note { font-size: 11px; color: var(--muted); margin-top: 6px; }
+  @media (max-width: 600px) {
+    .form-grid { grid-template-columns: 1fr; }
+    .trade-table { font-size: 12px; }
+    .trade-table th, .trade-table td { padding: 8px 6px; }
+    .main { padding: 16px 12px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="logo">Vikram <span>Journal</span></div>
+  <div class="cap-display">Capital: <strong id="capDisplay">₹1,00,000</strong></div>
+</div>
+
+<div class="tabs">
+  <button class="tab active" onclick="switchTab('add',this)">➕ Add Trade</button>
+  <button class="tab" onclick="switchTab('journal',this)">📒 Journal</button>
+  <button class="tab" onclick="switchTab('dashboard',this)">📊 Dashboard</button>
+  <button class="tab" onclick="switchTab('settings',this)">⚙️ Settings</button>
+</div>
+
+<div class="main">
+
+  <!-- ADD TRADE -->
+  <div id="tab-add" class="section active">
+    <div class="card">
+      <div class="card-title">🔑 API Key (Claude)</div>
+      <div class="api-row">
+        <input type="password" id="apiKey" placeholder="sk-ant-api03-..." />
+        <button class="btn btn-secondary" onclick="saveKey()">Save</button>
+      </div>
+      <div class="api-note">Stored only in your browser. Never sent anywhere except Anthropic API.</div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📸 Upload Screenshot</div>
+      <div class="upload-zone" onclick="document.getElementById('fileInput').click()">
+        <input type="file" id="fileInput" accept="image/*" onchange="handleFile(event)" />
+        <div class="upload-icon">📷</div>
+        <div class="upload-title">Click to upload TradingView screenshot</div>
+        <div class="upload-sub">PNG or JPG — AI will auto-read trade details</div>
+      </div>
+      <div id="previewBox" style="display:none; margin-top:14px; text-align:center;">
+        <img id="previewImg" class="preview-img" />
+        <button class="btn btn-primary btn-full" onclick="extractFromAI()" style="margin-top:8px;">✨ Extract with AI</button>
+      </div>
+      <div id="loadingBox" style="display:none;" class="loading-box">
+        <div class="spinner"></div>
+        <div style="font-size:13px; color:var(--muted);">AI is reading your chart...</div>
+      </div>
+    </div>
+
+    <div id="tradeForm" style="display:none;">
+      <div class="card">
+        <div class="ai-badge">✅ AI extracted — review and edit below</div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Stock / Symbol</label>
+            <input type="text" id="f_stock" placeholder="TATASTEEL" />
+          </div>
+          <div class="form-group">
+            <label>Date</label>
+            <input type="date" id="f_date" />
+          </div>
+          <div class="form-group">
+            <label>Trade Type</label>
+            <select id="f_type"><option>Long</option><option>Short</option></select>
+          </div>
+          <div class="form-group">
+            <label>Quantity</label>
+            <input type="number" id="f_qty" placeholder="100" />
+          </div>
+          <div class="form-group">
+            <label>Entry Price (₹)</label>
+            <input type="number" id="f_entry" placeholder="176.00" step="0.01" />
+          </div>
+          <div class="form-group">
+            <label>Stop Loss (₹)</label>
+            <input type="number" id="f_sl" placeholder="177.00" step="0.01" />
+          </div>
+          <div class="form-group">
+            <label>Target (₹)</label>
+            <input type="number" id="f_target" placeholder="169.00" step="0.01" />
+          </div>
+          <div class="form-group">
+            <label>Exit Price (₹)</label>
+            <input type="number" id="f_exit" placeholder="Optional" step="0.01" />
+          </div>
+          <div class="form-group full">
+            <label>Result</label>
+            <div class="toggle-group">
+              <button class="toggle-btn sel-open" onclick="pick(this,'result','Open')">Open</button>
+              <button class="toggle-btn" onclick="pick(this,'result','Win')">Win ✅</button>
+              <button class="toggle-btn" onclick="pick(this,'result','Loss')">Loss ❌</button>
+            </div>
+            <input type="hidden" id="f_result" value="Open" />
+          </div>
+          <div class="form-group full">
+            <label>Rule Followed?</label>
+            <div class="toggle-group">
+              <button class="toggle-btn" onclick="pick(this,'rule','Yes')">Yes 👍</button>
+              <button class="toggle-btn" onclick="pick(this,'rule','No')">No 👎</button>
+              <button class="toggle-btn" onclick="pick(this,'rule','Partial')">Partial 🤏</button>
+            </div>
+            <input type="hidden" id="f_rule" value="" />
+          </div>
+          <div class="form-group full">
+            <label>Notes / Remarks</label>
+            <textarea id="f_notes" placeholder="Why did you take this trade? What did you observe? Any lesson learned..."></textarea>
+          </div>
+        </div>
+        <hr class="divider" />
+        <div class="btn-row">
+          <button class="btn btn-secondary" onclick="resetForm()">Clear</button>
+          <button class="btn btn-primary" onclick="saveTrade()">💾 Save to Journal</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- JOURNAL -->
+  <div id="tab-journal" class="section">
+    <div class="card" style="padding:0; overflow:hidden;">
+      <div id="emptyJournal" class="empty" style="padding:48px;">No trades yet. Add your first trade!</div>
+      <div style="overflow-x:auto;">
+        <table class="trade-table" id="tradeTable" style="display:none;">
+          <thead>
+            <tr>
+              <th>Date</th><th>Stock</th><th>Type</th><th>Entry</th><th>Exit</th><th>P&L</th><th>Result</th><th>Rule</th><th></th>
+            </tr>
+          </thead>
+          <tbody id="tradeBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- DASHBOARD -->
+  <div id="tab-dashboard" class="section">
+    <div class="metric-grid">
+      <div class="metric"><div class="metric-label">Total Trades</div><div class="metric-value" id="m-total">0</div></div>
+      <div class="metric"><div class="metric-label">Win Rate</div><div class="metric-value green" id="m-wr">0%</div></div>
+      <div class="metric"><div class="metric-label">Total P&L</div><div class="metric-value" id="m-pnl">₹0</div></div>
+      <div class="metric"><div class="metric-label">Current Capital</div><div class="metric-value" id="m-cap">—</div></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Rule Discipline</div>
+      <div id="ruleStats" style="color:var(--muted); font-size:14px;">No data yet.</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Best & Worst Trades</div>
+      <div id="bestWorst" style="color:var(--muted); font-size:14px;">No closed trades yet.</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Trade Breakdown</div>
+      <div id="breakdown" style="color:var(--muted); font-size:14px;">No data yet.</div>
+    </div>
+  </div>
+
+  <!-- SETTINGS -->
+  <div id="tab-settings" class="section">
+    <div class="card">
+      <div class="card-title">Starting Capital</div>
+      <div style="display:flex; gap:8px; align-items:center;">
+        <input type="number" id="capitalInput" value="100000" style="width:180px;" />
+        <button class="btn btn-primary" onclick="saveCapital()">Update</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Export & Reset</div>
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <button class="btn btn-secondary" onclick="exportCSV()">📥 Export CSV</button>
+        <button class="btn btn-danger" onclick="clearAll()">🗑️ Clear All Trades</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">About</div>
+      <div style="font-size:13px; color:var(--muted); line-height:1.8;">
+        Vikram Journal — Your personal trading memory.<br/>
+        All data stored locally in your browser.<br/>
+        Built for Indian traders. 🇮🇳
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  let trades = JSON.parse(localStorage.getItem('vj_trades') || '[]');
+  let capital = parseFloat(localStorage.getItem('vj_capital') || '100000');
+  let currentImage = null;
+  let picks = { result: 'Open', rule: '' };
+
+  function switchTab(name, el) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+    el.classList.add('active');
+    document.getElementById('tab-' + name).classList.add('active');
+    if (name === 'journal') renderJournal();
+    if (name === 'dashboard') renderDashboard();
+  }
+
+  function saveKey() {
+    const k = document.getElementById('apiKey').value.trim();
+    if (k) { localStorage.setItem('vj_key', k); alert('API key saved!'); }
+    else alert('Please enter a key.');
+  }
+
+  function handleFile(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      currentImage = ev.target.result.split(',')[1];
+      document.getElementById('previewImg').src = ev.target.result;
+      document.getElementById('previewBox').style.display = 'block';
+    };
+    reader.readAsDataURL(file);
+  }
+
+  async function extractFromAI() {
+    const key = localStorage.getItem('vj_key') || document.getElementById('apiKey').value.trim();
+    if (!key) { alert('Please save your API key first.'); return; }
+    if (!currentImage) { alert('Please upload a screenshot.'); return; }
+    document.getElementById('previewBox').style.display = 'none';
+    document.getElementById('loadingBox').style.display = 'block';
+    try {
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' },
+        body: JSON.stringify({
+          model: 'claude-opus-4-20250514',
+          max_tokens: 800,
+          messages: [{
+            role: 'user',
+            content: [
+              { type: 'image', source: { type: 'base64', media_type: 'image/png', data: currentImage } },
+              { type: 'text', text: 'This is a TradingView chart screenshot from an Indian trader. Extract trade details and return ONLY a valid JSON object with keys: stock (string, ticker name), date (YYYY-MM-DD, use today if not visible: ' + new Date().toISOString().split('T')[0] + '), entry (number), sl (number, stop loss price), target (number), qty (number, quantity). If value not visible use null. Return ONLY the JSON, no other text.' }
+            ]
+          }]
+        })
+      });
+      const data = await res.json();
+      document.getElementById('loadingBox').style.display = 'none';
+      if (data.error) { alert('API Error: ' + data.error.message); document.getElementById('previewBox').style.display = 'block'; return; }
+      const txt = data.content[0].text.replace(/```json|```/g, '').trim();
+      const p = JSON.parse(txt);
+      if (p.stock) document.getElementById('f_stock').value = p.stock.toUpperCase();
+      if (p.date) document.getElementById('f_date').value = p.date;
+      if (p.entry) document.getElementById('f_entry').value = p.entry;
+      if (p.sl) document.getElementById('f_sl').value = p.sl;
+      if (p.target) document.getElementById('f_target').value = p.target;
+      if (p.qty) document.getElementById('f_qty').value = p.qty;
+      document.getElementById('tradeForm').style.display = 'block';
+    } catch (err) {
+      document.getElementById('loadingBox').style.display = 'none';
+      document.getElementById('previewBox').style.display = 'block';
+      alert('Error: ' + err.message);
+    }
+  }
+
+  function pick(btn, field, val) {
+    const group = btn.closest('.toggle-group');
+    group.querySelectorAll('.toggle-btn').forEach(b => b.className = 'toggle-btn');
+    btn.classList.add('sel-' + val.toLowerCase());
+    picks[field] = val;
+    document.getElementById('f_' + field).value = val;
+  }
+
+  function saveTrade() {
+    const stock = document.getElementById('f_stock').value.trim().toUpperCase();
+    if (!stock) { alert('Please enter stock name.'); return; }
+    const entry = parseFloat(document.getElementById('f_entry').value) || 0;
+    const exit = parseFloat(document.getElementById('f_exit').value) || 0;
+    const qty = parseFloat(document.getElementById('f_qty').value) || 0;
+    const type = document.getElementById('f_type').value;
+    let pnl = 0;
+    if (exit && qty && entry) {
+      pnl = type === 'Long' ? (exit - entry) * qty : (entry - exit) * qty;
+      pnl = parseFloat(pnl.toFixed(2));
+    }
+    trades.unshift({
+      id: Date.now(),
+      stock, date: document.getElementById('f_date').value,
+      type, qty, entry,
+      sl: parseFloat(document.getElementById('f_sl').value) || 0,
+      target: parseFloat(document.getElementById('f_target').value) || 0,
+      exit, result: picks.result || 'Open',
+      rule: picks.rule, notes: document.getElementById('f_notes').value, pnl
+    });
+    localStorage.setItem('vj_trades', JSON.stringify(trades));
+    alert('Trade saved! ✅');
+    resetForm();
+  }
+
+  function resetForm() {
+    document.getElementById('tradeForm').style.display = 'none';
+    document.getElementById('previewBox').style.display = 'none';
+    document.getElementById('loadingBox').style.display = 'none';
+    ['f_stock','f_entry','f_sl','f_target','f_exit','f_qty','f_notes'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('f_date').value = '';
+    document.getElementById('f_result').value = 'Open';
+    document.getElementById('f_rule').value = '';
+    picks = { result: 'Open', rule: '' };
+    document.querySelectorAll('.toggle-group').forEach(g => {
+      g.querySelectorAll('.toggle-btn').forEach((b,i) => { b.className = 'toggle-btn'; if(i===0) b.classList.add('sel-open'); });
+    });
+    currentImage = null;
+    document.getElementById('fileInput').value = '';
+  }
+
+  function renderJournal() {
+    const body = document.getElementById('tradeBody');
+    const empty = document.getElementById('emptyJournal');
+    const table = document.getElementById('tradeTable');
+    if (!trades.length) { empty.style.display = 'block'; table.style.display = 'none'; return; }
+    empty.style.display = 'none';
+    table.style.display = 'table';
+    body.innerHTML = trades.map(t => {
+      const pc = t.pnl > 0 ? 'color:var(--green);font-weight:600;' : t.pnl < 0 ? 'color:var(--red);font-weight:600;' : '';
+      const rp = t.result === 'Win' ? 'pill-win' : t.result === 'Loss' ? 'pill-loss' : 'pill-open';
+      const rlp = t.rule === 'Yes' ? 'pill-yes' : t.rule === 'No' ? 'pill-no' : t.rule === 'Partial' ? 'pill-partial' : '';
+      const tp = t.type === 'Long' ? 'pill-long' : 'pill-short';
+      return `<tr>
+        <td style="color:var(--muted);font-size:12px;">${t.date||'—'}</td>
+        <td><strong>${t.stock}</strong></td>
+        <td><span class="pill ${tp}">${t.type}</span></td>
+        <td>₹${t.entry||'—'}</td>
+        <td>${t.exit ? '₹'+t.exit : '—'}</td>
+        <td style="${pc}">${t.pnl ? (t.pnl>0?'+':'')+'₹'+t.pnl.toLocaleString('en-IN') : '—'}</td>
+        <td><span class="pill ${rp}">${t.result}</span></td>
+        <td>${t.rule ? '<span class="pill '+rlp+'">'+t.rule+'</span>' : '—'}</td>
+        <td><button class="del-btn" onclick="deleteTrade(${t.id})">✕</button></td>
+      </tr>`;
+    }).join('');
+  }
+
+  function deleteTrade(id) {
+    if (!confirm('Delete this trade?')) return;
+    trades = trades.filter(t => t.id !== id);
+    localStorage.setItem('vj_trades', JSON.stringify(trades));
+    renderJournal();
+  }
+
+  function renderDashboard() {
+    const closed = trades.filter(t => t.result !== 'Open');
+    const wins = trades.filter(t => t.result === 'Win');
+    const losses = trades.filter(t => t.result === 'Loss');
+    const totalPnl = trades.reduce((s, t) => s + (t.pnl || 0), 0);
+    const wr = closed.length ? Math.round((wins.length / closed.length) * 100) : 0;
+    const curCap = capital + totalPnl;
+    document.getElementById('m-total').textContent = trades.length;
+    document.getElementById('m-wr').textContent = wr + '%';
+    const pnlEl = document.getElementById('m-pnl');
+    pnlEl.textContent = (totalPnl >= 0 ? '+' : '') + '₹' + Math.round(totalPnl).toLocaleString('en-IN');
+    pnlEl.className = 'metric-value ' + (totalPnl >= 0 ? 'green' : 'red');
+    document.getElementById('m-cap').textContent = '₹' + Math.round(curCap).toLocaleString('en-IN');
+    document.getElementById('capDisplay').textContent = '₹' + Math.round(curCap).toLocaleString('en-IN');
+    const ry = trades.filter(t => t.rule === 'Yes').length;
+    const rn = trades.filter(t => t.rule === 'No').length;
+    const rp = trades.filter(t => t.rule === 'Partial').length;
+    document.getElementById('ruleStats').innerHTML = trades.length
+      ? `<div style="display:flex;gap:20px;flex-wrap:wrap;font-size:14px;">
+          <span><span class="pill pill-yes">Yes</span> &nbsp;<strong>${ry}</strong> trades</span>
+          <span><span class="pill pill-no">No</span> &nbsp;<strong>${rn}</strong> trades</span>
+          <span><span class="pill pill-partial">Partial</span> &nbsp;<strong>${rp}</strong> trades</span>
+        </div>` : 'No data yet.';
+    const withPnl = trades.filter(t => t.pnl);
+    if (withPnl.length) {
+      const best = withPnl.reduce((a, b) => a.pnl > b.pnl ? a : b);
+      const worst = withPnl.reduce((a, b) => a.pnl < b.pnl ? a : b);
+      document.getElementById('bestWorst').innerHTML = `
+        <div style="display:flex;gap:32px;flex-wrap:wrap;">
+          <div><div style="font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">Best Trade</div>
+            <div style="font-size:16px;font-weight:700;color:var(--green);">${best.stock} +₹${best.pnl.toLocaleString('en-IN')}</div></div>
+          <div><div style="font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">Worst Trade</div>
+            <div style="font-size:16px;font-weight:700;color:var(--red);">${worst.stock} ₹${worst.pnl.toLocaleString('en-IN')}</div></div>
+        </div>`;
+    }
+    document.getElementById('breakdown').innerHTML = trades.length
+      ? `<div style="display:flex;gap:32px;flex-wrap:wrap;font-size:14px;">
+          <span>🟢 Wins: <strong>${wins.length}</strong></span>
+          <span>🔴 Losses: <strong>${losses.length}</strong></span>
+          <span>🔵 Open: <strong>${trades.filter(t=>t.result==='Open').length}</strong></span>
+          <span>📊 Closed: <strong>${closed.length}</strong></span>
+        </div>` : 'No data yet.';
+  }
+
+  function saveCapital() {
+    const v = parseFloat(document.getElementById('capitalInput').value);
+    if (v > 0) { capital = v; localStorage.setItem('vj_capital', v); alert('Capital updated!'); renderDashboard(); }
+  }
+
+  function exportCSV() {
+    if (!trades.length) { alert('No trades to export.'); return; }
+    const h = ['Date','Stock','Type','Entry','SL','Target','Exit','Result','PnL','Rule','Notes'];
+    const rows = trades.map(t => [t.date,t.stock,t.type,t.entry,t.sl,t.target,t.exit||'',t.result,t.pnl||'',t.rule,'"'+(t.notes||'').replace(/"/g,"'")+'"']);
+    const csv = [h.join(','),...rows.map(r=>r.join(','))].join('\n');
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
+    a.download = 'vikram_journal.csv';
+    a.click();
+  }
+
+  function clearAll() {
+    if (!confirm('Delete ALL trades? This cannot be undone!')) return;
+    trades = [];
+    localStorage.setItem('vj_trades', JSON.stringify(trades));
+    renderJournal();
+    renderDashboard();
+  }
+
+  // Init
+  document.getElementById('capitalInput').value = capital;
+  document.getElementById('capDisplay').textContent = '₹' + capital.toLocaleString('en-IN');
+  const sk = localStorage.getItem('vj_key');
+  if (sk) document.getElementById('apiKey').value = sk;
+</script>
+</body>
+</html>
