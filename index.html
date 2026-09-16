@@ -113,6 +113,9 @@ canvas{width:100%!important;}
 .brok-result{background:var(--bg);border:1px solid var(--border);border-radius:var(--rs);padding:12px;margin-top:12px;}
 .brok-row{display:flex;justify-content:space-between;padding:4px 0;font-size:13px;border-bottom:1px solid var(--border);}
 .brok-row:last-child{border-bottom:none;font-weight:700;}
+.charge-net{font-weight:700;color:var(--green);}
+.charge-net.loss{color:var(--red);}
+.charge-muted{color:var(--muted);font-size:12px;}
 .mistake-check{display:flex;flex-wrap:wrap;gap:8px;}
 .mistake-check label{display:flex;align-items:center;gap:6px;padding:6px 12px;border:1px solid var(--border2);border-radius:20px;cursor:pointer;font-size:12px;font-weight:500;text-transform:none;letter-spacing:0;color:var(--muted);transition:all .15s;}
 .mistake-check input{display:none;}
@@ -171,14 +174,19 @@ canvas{width:100%!important;}
     <div class="form-grid">
       <div class="form-group"><label>Stock / Symbol</label><input type="text" id="f_stock" placeholder="TATASTEEL" /></div>
       <div class="form-group"><label>Date</label><input type="date" id="f_date" /></div>
-      <div class="form-group"><label>Trade Type</label><select id="f_type"><option>Long</option><option>Short</option></select></div>
-      <div class="form-group"><label>Quantity</label><input type="number" id="f_qty" placeholder="100" /></div>
-      <div class="form-group"><label>Entry Price (₹)</label><input type="number" id="f_entry" placeholder="176.00" step="0.01" oninput="autoRRR()" /></div>
+      <div class="form-group"><label>Trade Type</label><select id="f_type" onchange="autoRRR()"><option>Long</option><option>Short</option></select></div>
+      <div class="form-group"><label>Dhan Segment</label><select id="f_segment" onchange="recalcTradeCharges()"><option value="eq_intraday">Equity Intraday</option><option value="eq_delivery">Equity Delivery</option><option value="fo_futures">F&O Futures</option><option value="fo_options">F&O Options</option></select></div>
+      <div class="form-group"><label>Exchange</label><select id="f_exchange" onchange="recalcTradeCharges()"><option value="NSE">NSE</option><option value="BSE">BSE</option></select></div>
+      <div class="form-group"><label>Quantity</label><input type="number" id="f_qty" placeholder="100" oninput="recalcTradeCharges()" /></div>
+      <div class="form-group"><label>Entry Price (₹)</label><input type="number" id="f_entry" placeholder="176.00" step="0.01" oninput="autoRRR();recalcTradeCharges()" /></div>
       <div class="form-group"><label>Stop Loss (₹)</label><input type="number" id="f_sl" placeholder="177.00" step="0.01" oninput="autoRRR()" /></div>
       <div class="form-group"><label>Target (₹)</label><input type="number" id="f_target" placeholder="169.00" step="0.01" oninput="autoRRR()" /></div>
-      <div class="form-group"><label>Exit Price (₹)</label><input type="number" id="f_exit" placeholder="Optional" step="0.01" /></div>
+      <div class="form-group"><label>Exit Price (₹)</label><input type="number" id="f_exit" placeholder="Optional" step="0.01" oninput="recalcTradeCharges()" /></div>
       <div class="form-group full" id="rrrDisplay" style="display:none;">
         <div id="rrrInline" class="rrr-result"></div>
+      </div>
+      <div class="form-group full" id="tradeChargesDisplay" style="display:none;">
+        <div id="tradeChargesInline" class="brok-result"></div>
       </div>
       <div class="form-group full">
         <label>Result</label>
@@ -246,7 +254,10 @@ canvas{width:100%!important;}
   <div class="metric-grid">
     <div class="metric"><div class="metric-label">Total Trades</div><div class="metric-value" id="m-total">0</div></div>
     <div class="metric"><div class="metric-label">Win Rate</div><div class="metric-value green" id="m-wr">0%</div></div>
-    <div class="metric"><div class="metric-label">Total P&L</div><div class="metric-value" id="m-pnl">₹0</div></div>
+    <div class="metric"><div class="metric-label">Gross P&L</div><div class="metric-value" id="m-gross">₹0</div></div>
+    <div class="metric"><div class="metric-label">Brokerage</div><div class="metric-value red" id="m-brokerage">₹0</div></div>
+    <div class="metric"><div class="metric-label">Other Charges</div><div class="metric-value red" id="m-othercharges">₹0</div></div>
+    <div class="metric"><div class="metric-label">Net P&L</div><div class="metric-value" id="m-pnl">₹0</div></div>
     <div class="metric"><div class="metric-label">Current Capital</div><div class="metric-value" id="m-cap">—</div></div>
     <div class="metric"><div class="metric-label">Avg Win</div><div class="metric-value green" id="m-avgwin">—</div></div>
     <div class="metric"><div class="metric-label">Avg Loss</div><div class="metric-value red" id="m-avgloss">—</div></div>
@@ -323,7 +334,7 @@ canvas{width:100%!important;}
   </div>
   <div class="card">
     <div class="card-title">About</div>
-    <div style="font-size:13px;color:var(--muted);line-height:2;">Vikram Journal — Your personal trading memory.<br/>Sab data browser mein save hota hai locally.<br/>Built for Indian traders. 🇮🇳</div>
+    <div style="font-size:13px;color:var(--muted);line-height:2;">Vikram Journal — Your personal trading memory.<br/>Sab data browser mein save hota hai locally.<br/>Built for Indian traders. 🇮🇳<br/>P&L shows gross and Dhan-estimated net after applicable charges.</div>
   </div>
 </div>
 </div>
@@ -342,6 +353,8 @@ canvas{width:100%!important;}
       <div class="form-group"><label>Stock</label><input type="text" id="e_stock" /></div>
       <div class="form-group"><label>Date</label><input type="date" id="e_date" /></div>
       <div class="form-group"><label>Type</label><select id="e_type"><option>Long</option><option>Short</option></select></div>
+      <div class="form-group"><label>Dhan Segment</label><select id="e_segment"><option value="eq_intraday">Equity Intraday</option><option value="eq_delivery">Equity Delivery</option><option value="fo_futures">F&O Futures</option><option value="fo_options">F&O Options</option></select></div>
+      <div class="form-group"><label>Exchange</label><select id="e_exchange"><option value="NSE">NSE</option><option value="BSE">BSE</option></select></div>
       <div class="form-group"><label>Qty</label><input type="number" id="e_qty" /></div>
       <div class="form-group"><label>Entry (₹)</label><input type="number" id="e_entry" step="0.01" /></div>
       <div class="form-group"><label>SL (₹)</label><input type="number" id="e_sl" step="0.01" /></div>
@@ -458,6 +471,96 @@ function getMistakes(){
   return [...document.querySelectorAll('#mistakeCheck input:checked')].map(c=>c.value);
 }
 
+
+// DHAN CHARGES
+// Rates below are based on Dhan's current official pricing page.
+// STT and Stamp Duty are rounded to nearest rupee; other charges to 2 decimals.
+function round2(n){return Math.round((n+Number.EPSILON)*100)/100;}
+function round0(n){return Math.round(n);}
+function formatINR(n){
+  return Number(n||0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});
+}
+function formatSignedINR(n){
+  const v=Number(n||0);
+  return (v>=0?'+':'-')+'₹'+Math.abs(v).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});
+}
+
+function dhanCharges(segment, exchange, buy, sell, qty){
+  if(!buy||!sell||!qty) return null;
+  const buyVal=buy*qty, sellVal=sell*qty, turnover=buyVal+sellVal;
+  let brokerage=0, stt=0, exchTxn=0, sebi=0, stamp=0, ipft=0;
+  const eqNse=0.000030699, eqBse=0.0000375; // percentage converted to decimal
+  const txnRate=(exchange==='BSE'?eqBse:eqNse);
+  const labels={
+    eq_intraday:'Equity Intraday',
+    eq_delivery:'Equity Delivery',
+    fo_futures:'F&O Futures',
+    fo_options:'F&O Options'
+  };
+
+  if(segment==='eq_intraday'){
+    brokerage=Math.min(20,buyVal*0.0003)+Math.min(20,sellVal*0.0003);
+    stt=round0(sellVal*0.00025);
+    exchTxn=turnover*txnRate;
+    stamp=round0(buyVal*0.00003);
+  }else if(segment==='eq_delivery'){
+    brokerage=0;
+    stt=round0(turnover*0.001);
+    exchTxn=turnover*txnRate;
+    stamp=round0(buyVal*0.00015);
+  }else if(segment==='fo_futures'){
+    brokerage=20*2;
+    // Equity futures: STT on sell side. Exchange/other derivative rates can vary,
+    // so the journal keeps the exact brokerage and records the statutory components it can calculate.
+    stt=round0(sellVal*0.0001);
+    exchTxn=0;
+    stamp=round0(buyVal*0.00003);
+  }else if(segment==='fo_options'){
+    brokerage=20*2;
+    stt=round0(sellVal*0.000625);
+    exchTxn=0;
+    stamp=round0(buyVal*0.00003);
+  }
+
+  sebi=turnover*0.000001; // 0.0001%
+  ipft=turnover*0.000000001; // 0.0000001%
+  const gst=(brokerage+exchTxn+sebi+ipft)*0.18;
+  const total=brokerage+stt+exchTxn+sebi+stamp+ipft+gst;
+  const otherCharges=total-brokerage;
+
+  return {
+    segment,segmentLabel:labels[segment]||segment,exchange,
+    brokerage:round2(brokerage),stt:round2(stt),exchangeTxn:round2(exchTxn),
+    sebi:round2(sebi),stamp:round2(stamp),ipft:round2(ipft),gst:round2(gst),
+    otherCharges:round2(otherCharges),total:round2(total),
+    buyValue:round2(buyVal),sellValue:round2(sellVal),turnover:round2(turnover)
+  };
+}
+
+function recalcTradeCharges(){
+  const buy=parseFloat(document.getElementById('f_entry').value)||0;
+  const sell=parseFloat(document.getElementById('f_exit').value)||0;
+  const qty=parseFloat(document.getElementById('f_qty').value)||0;
+  const el=document.getElementById('tradeChargesDisplay');
+  if(!buy||!sell||!qty){el.style.display='none';return null;}
+  const c=dhanCharges(
+    document.getElementById('f_segment').value,
+    document.getElementById('f_exchange').value,
+    buy,sell,qty
+  );
+  if(!c){el.style.display='none';return null;}
+  const gross=document.getElementById('f_type').value==='Long'?(sell-buy)*qty:(buy-sell)*qty;
+  const net=gross-c.total;
+  document.getElementById('tradeChargesInline').innerHTML=
+    `<div class="brok-row"><span>Gross P&L</span><span>${formatSignedINR(gross)}</span></div>
+     <div class="brok-row"><span>Brokerage</span><span>−₹${formatINR(c.brokerage)}</span></div>
+     <div class="brok-row"><span>Other Govt/Exchange Charges</span><span>−₹${formatINR(c.otherCharges)}</span></div>
+     <div class="brok-row"><span>Total Charges</span><span>−₹${formatINR(c.total)}</span></div>
+     <div class="brok-row" style="font-weight:700;"><span>Net P&L</span><span class="${net<0?'charge-net loss':'charge-net'}">${formatSignedINR(net)}</span></div>`;
+  el.style.display='block';
+  return c;
+}
+
 function saveTrade(){
   const stock=document.getElementById('f_stock').value.trim().toUpperCase();
   if(!stock){alert('Stock name daalo!');return;}
@@ -465,8 +568,17 @@ function saveTrade(){
   const exit=parseFloat(document.getElementById('f_exit').value)||0;
   const qty=parseFloat(document.getElementById('f_qty').value)||0;
   const type=document.getElementById('f_type').value;
-  let pnl=0;
-  if(exit&&qty&&entry){pnl=type==='Long'?(exit-entry)*qty:(entry-exit)*qty;pnl=parseFloat(pnl.toFixed(2));}
+  let pnl=0, charges=null, netPnl=null;
+  if(exit&&qty&&entry){
+    pnl=type==='Long'?(exit-entry)*qty:(entry-exit)*qty;
+    pnl=parseFloat(pnl.toFixed(2));
+    charges=dhanCharges(
+      document.getElementById('f_segment').value,
+      document.getElementById('f_exchange').value,
+      entry,exit,qty
+    );
+    netPnl=parseFloat((pnl-(charges?charges.total:0)).toFixed(2));
+  }
   const sl=parseFloat(document.getElementById('f_sl').value)||0;
   const target=parseFloat(document.getElementById('f_target').value)||0;
   let rrr='';
@@ -481,7 +593,10 @@ function saveTrade(){
     result:picks.result||'Open',rule:picks.rule,
     mistakes:getMistakes(),
     notes:document.getElementById('f_notes').value,
-    pnl,rrr,image:currentImageB64||null
+    pnl,netPnl,rrr,image:currentImageB64||null,
+    segment:document.getElementById('f_segment').value,
+    exchange:document.getElementById('f_exchange').value,
+    charges
   });
   localStorage.setItem('vj_trades',JSON.stringify(trades));
   calcStreak();
@@ -495,6 +610,9 @@ function resetForm(){
   document.getElementById('f_result').value='Open';
   document.getElementById('f_rule').value='';
   document.getElementById('rrrDisplay').style.display='none';
+  document.getElementById('tradeChargesDisplay').style.display='none';
+  document.getElementById('f_segment').value='eq_intraday';
+  document.getElementById('f_exchange').value='NSE';
   document.querySelectorAll('.toggle-group').forEach((g,gi)=>{
     g.querySelectorAll('.toggle-btn').forEach((b,i)=>{b.className='toggle-btn';if(gi===0&&i===0)b.classList.add('sel-open');});
   });
@@ -556,7 +674,8 @@ function tradeCardHTML(t){
   const rp=t.result==='Win'?'pill-win':t.result==='Loss'?'pill-loss':'pill-open';
   const rlp=t.rule==='Yes'?'pill-yes':t.rule==='No'?'pill-no':t.rule==='Partial'?'pill-partial':'';
   const tp=t.type==='Long'?'pill-long':'pill-short';
-  const pnlStr=t.pnl?(t.pnl>0?'+':'')+'\u20B9'+t.pnl.toLocaleString('en-IN'):'—';
+  const displayPnl = t.netPnl!=null ? t.netPnl : t.pnl;
+  const pnlStr=displayPnl?(displayPnl>0?'+':'')+'\u20B9'+displayPnl.toLocaleString('en-IN'):'—';
   const thumb=t.image?`<img src="${t.image}" class="trade-thumb" onclick="openModal(${t.id},event)" />`:`<div class="trade-thumb-placeholder">📷</div>`;
   const mistakes=t.mistakes&&t.mistakes.length?`<div class="mistakes-box">${t.mistakes.map(m=>`<span class="mistake-tag">${m}</span>`).join('')}</div>`:'';
   return `<div class="trade-card">
@@ -583,8 +702,12 @@ function tradeCardHTML(t){
         <div><div class="detail-label">Target</div><div class="detail-value">\u20B9${t.target||'—'}</div></div>
         <div><div class="detail-label">Exit</div><div class="detail-value">${t.exit?'\u20B9'+t.exit:'—'}</div></div>
         <div><div class="detail-label">Qty</div><div class="detail-value">${t.qty||'—'}</div></div>
-        <div><div class="detail-label">P&L</div><div class="detail-value" style="color:${pc};">${pnlStr}</div></div>
+        <div><div class="detail-label">Gross P&L</div><div class="detail-value" style="color:${pc};">${pnlStr}</div></div>
+        <div><div class="detail-label">Brokerage</div><div class="detail-value">₹${t.charges?formatINR(t.charges.brokerage):'—'}</div></div>
+        <div><div class="detail-label">Other Charges</div><div class="detail-value">₹${t.charges?formatINR(t.charges.otherCharges):'—'}</div></div>
+        <div><div class="detail-label">Net P&L</div><div class="detail-value" style="color:${t.netPnl<0?'var(--red)':t.netPnl>0?'var(--green)':'var(--muted)'};">${t.netPnl!=null?formatSignedINR(t.netPnl):'—'}</div></div>
       </div>
+      ${t.charges?`<div class="notes-box"><strong>Dhan charges:</strong> ${t.charges.segmentLabel} · ${t.charges.exchange} · Total charges ₹${formatINR(t.charges.total)}</div>`:''}
       ${mistakes}
       ${t.notes?`<div class="notes-box">📝 ${t.notes}</div>`:''}
     </div>
@@ -608,6 +731,8 @@ function openEdit(id,e){
   document.getElementById('e_stock').value=t.stock||'';
   document.getElementById('e_date').value=t.date||'';
   document.getElementById('e_type').value=t.type||'Long';
+  document.getElementById('e_segment').value=t.segment||'eq_intraday';
+  document.getElementById('e_exchange').value=t.exchange||'NSE';
   document.getElementById('e_qty').value=t.qty||'';
   document.getElementById('e_entry').value=t.entry||'';
   document.getElementById('e_sl').value=t.sl||'';
@@ -646,6 +771,8 @@ function saveEdit(){
   t.stock=document.getElementById('e_stock').value.trim().toUpperCase();
   t.date=document.getElementById('e_date').value;
   t.type=document.getElementById('e_type').value;
+  t.segment=document.getElementById('e_segment').value;
+  t.exchange=document.getElementById('e_exchange').value;
   t.qty=parseFloat(document.getElementById('e_qty').value)||0;
   t.entry=parseFloat(document.getElementById('e_entry').value)||0;
   t.sl=parseFloat(document.getElementById('e_sl').value)||0;
@@ -656,6 +783,11 @@ function saveEdit(){
   if(t.exit&&t.qty&&t.entry){
     t.pnl=t.type==='Long'?(t.exit-t.entry)*t.qty:(t.entry-t.exit)*t.qty;
     t.pnl=parseFloat(t.pnl.toFixed(2));
+    t.charges=dhanCharges(t.segment,t.exchange,t.entry,t.exit,t.qty);
+    t.netPnl=parseFloat((t.pnl-t.charges.total).toFixed(2));
+  }else{
+    t.charges=null;
+    t.netPnl=null;
   }
   localStorage.setItem('vj_trades',JSON.stringify(trades));
   closeEdit();renderJournal();
@@ -674,18 +806,24 @@ function renderDashboard(){
   const closed=trades.filter(t=>t.result!=='Open');
   const wins=trades.filter(t=>t.result==='Win');
   const losses=trades.filter(t=>t.result==='Loss');
-  const totalPnl=trades.reduce((s,t)=>s+(t.pnl||0),0);
+  const grossPnl=trades.reduce((s,t)=>s+(t.pnl||0),0);
+  const totalBrokerage=trades.reduce((s,t)=>s+(t.charges?t.charges.brokerage:0),0);
+  const totalOtherCharges=trades.reduce((s,t)=>s+(t.charges?t.charges.otherCharges:0),0);
+  const totalPnl=trades.reduce((s,t)=>s+(t.netPnl!=null?t.netPnl:(t.pnl||0)),0);
   const wr=closed.length?Math.round((wins.length/closed.length)*100):0;
   const curCap=capital+totalPnl;
   document.getElementById('m-total').textContent=trades.length;
   document.getElementById('m-wr').textContent=wr+'%';
+  document.getElementById('m-gross').textContent=(grossPnl>=0?'+':'')+'₹'+Math.round(grossPnl).toLocaleString('en-IN');
+  document.getElementById('m-brokerage').textContent='₹'+Math.round(totalBrokerage).toLocaleString('en-IN');
+  document.getElementById('m-othercharges').textContent='₹'+Math.round(totalOtherCharges).toLocaleString('en-IN');
   const pel=document.getElementById('m-pnl');
   pel.textContent=(totalPnl>=0?'+':'')+'\u20B9'+Math.round(totalPnl).toLocaleString('en-IN');
   pel.className='metric-value '+(totalPnl>=0?'green':'red');
   document.getElementById('m-cap').textContent='\u20B9'+Math.round(curCap).toLocaleString('en-IN');
   document.getElementById('capDisplay').textContent='\u20B9'+Math.round(curCap).toLocaleString('en-IN');
-  const winPnls=wins.map(t=>t.pnl||0).filter(p=>p>0);
-  const lossPnls=losses.map(t=>t.pnl||0).filter(p=>p<0);
+  const winPnls=wins.map(t=>t.netPnl!=null?t.netPnl:(t.pnl||0)).filter(p=>p>0);
+  const lossPnls=losses.map(t=>t.netPnl!=null?t.netPnl:(t.pnl||0)).filter(p=>p<0);
   document.getElementById('m-avgwin').textContent=winPnls.length?'\u20B9'+Math.round(winPnls.reduce((a,b)=>a+b,0)/winPnls.length).toLocaleString('en-IN'):'—';
   document.getElementById('m-avgloss').textContent=lossPnls.length?'\u20B9'+Math.round(lossPnls.reduce((a,b)=>a+b,0)/lossPnls.length).toLocaleString('en-IN'):'—';
 
@@ -695,7 +833,7 @@ function renderDashboard(){
     if(!t.date)return;
     const d=new Date(t.date);
     const key=d.toLocaleString('default',{month:'short',year:'2-digit'});
-    monthMap[key]=(monthMap[key]||0)+(t.pnl||0);
+    monthMap[key]=(monthMap[key]||0)+(t.netPnl!=null?t.netPnl:(t.pnl||0));
   });
   const labels=Object.keys(monthMap);
   const vals=labels.map(k=>parseFloat(monthMap[k].toFixed(2)));
@@ -745,14 +883,16 @@ function renderDashboard(){
     :'No data yet.';
 
   // Best/Worst
-  const wp=trades.filter(t=>t.pnl);
+  const wp=trades.filter(t=>(t.netPnl!=null?t.netPnl:t.pnl));
   if(wp.length){
-    const best=wp.reduce((a,b)=>a.pnl>b.pnl?a:b);
-    const worst=wp.reduce((a,b)=>a.pnl<b.pnl?a:b);
+    const best=wp.reduce((a,b)=>(a.netPnl!=null?a.netPnl:a.pnl)>(b.netPnl!=null?b.netPnl:b.pnl)?a:b);
+    const worst=wp.reduce((a,b)=>(a.netPnl!=null?a.netPnl:a.pnl)<(b.netPnl!=null?b.netPnl:b.pnl)?a:b);
+    const bestPnl=best.netPnl!=null?best.netPnl:best.pnl;
+    const worstPnl=worst.netPnl!=null?worst.netPnl:worst.pnl;
     document.getElementById('bestWorst').innerHTML=
       `<div style="display:flex;gap:28px;flex-wrap:wrap;">
-        <div><div class="detail-label">Best Trade</div><div style="font-size:16px;font-weight:700;color:var(--green);">${best.stock} +\u20B9${best.pnl.toLocaleString('en-IN')}</div></div>
-        <div><div class="detail-label">Worst Trade</div><div style="font-size:16px;font-weight:700;color:var(--red);">${worst.stock} \u20B9${worst.pnl.toLocaleString('en-IN')}</div></div>
+        <div><div class="detail-label">Best Trade</div><div style="font-size:16px;font-weight:700;color:var(--green);">${best.stock} ${bestPnl>=0?'+':''}\u20B9${bestPnl.toLocaleString('en-IN')}</div></div>
+        <div><div class="detail-label">Worst Trade</div><div style="font-size:16px;font-weight:700;color:var(--red);">${worst.stock} ${worstPnl>=0?'+':''}\u20B9${worstPnl.toLocaleString('en-IN')}</div></div>
       </div>`;
   }
 }
@@ -787,29 +927,21 @@ function calcBrokerage(){
   const sell=parseFloat(document.getElementById('b_sell').value)||0;
   const qty=parseFloat(document.getElementById('b_qty').value)||0;
   if(!buy||!sell||!qty)return;
-  const buyVal=buy*qty, sellVal=sell*qty, turnover=buyVal+sellVal;
-  let brokerage=0,stt=0,exchTxn=0,sebi=0,stamp=0;
-  if(seg==='eq_intraday'){brokerage=Math.min(20,buyVal*0.0003)+Math.min(20,sellVal*0.0003);stt=sellVal*0.00025;exchTxn=turnover*0.0000345;}
-  else if(seg==='eq_delivery'){brokerage=0;stt=turnover*0.001;exchTxn=turnover*0.0000345;}
-  else if(seg==='fo_futures'){brokerage=Math.min(20,buyVal*0.0003)+Math.min(20,sellVal*0.0003);stt=sellVal*0.0001;exchTxn=turnover*0.000019;}
-  else{brokerage=Math.min(20,qty*20);stt=(sell*qty)*0.000625;exchTxn=turnover*0.000053;}
-  sebi=turnover*0.000001;stamp=buyVal*0.00015;
-  const gst=(brokerage+exchTxn+sebi)*0.18;
-  const total=brokerage+stt+exchTxn+sebi+stamp+gst;
-  const netPnl=(sellVal-buyVal)-total;
+  const c=dhanCharges(seg,'NSE',buy,sell,qty);
+  if(!c)return;
   const el=document.getElementById('brokerageResult');
   el.style.display='block';
   el.innerHTML=[
-    ['Brokerage',brokerage],['STT',stt],['Exchange Txn',exchTxn],
-    ['SEBI',sebi],['Stamp Duty',stamp],['GST',gst],['Total Charges',total],['Net P&L',netPnl]
+    ['Buy Value',c.buyValue],['Sell Value',c.sellValue],['Turnover',c.turnover],
+    ['Brokerage',c.brokerage],['STT',c.stt],['Exchange Txn',c.exchangeTxn],
+    ['SEBI',c.sebi],['Stamp Duty',c.stamp],['IPFT',c.ipft],['GST',c.gst],
+    ['Total Charges',c.total]
   ].map(([l,v],i)=>{
-    const isTotal=i===6,isNet=i===7;
-    const col=isNet?(v>=0?'var(--green)':'var(--red)'):'';
-    return `<div class="brok-row" style="${isTotal||isNet?'font-weight:700;':''}${col?'color:'+col+';':''}">
-      <span>${l}</span><span>\u20B9${Math.abs(v).toFixed(2)}${isNet&&v<0?' (loss)':''}</span></div>`;
+    const bold=i===10;
+    return `<div class="brok-row" style="${bold?'font-weight:700;':''}">
+      <span>${l}</span><span>₹${formatINR(v)}</span></div>`;
   }).join('');
 }
-
 function saveCapital(){
   const v=parseFloat(document.getElementById('capitalInput').value);
   if(v>0){capital=v;localStorage.setItem('vj_capital',v);alert('Updated! ✅');renderDashboard();}
@@ -817,8 +949,8 @@ function saveCapital(){
 
 function exportCSV(){
   if(!trades.length){alert('No trades.');return;}
-  const h=['Date','Stock','Type','Entry','SL','Target','Exit','Result','PnL','RRR','Rule','Mistakes','Notes'];
-  const rows=trades.map(t=>[t.date,t.stock,t.type,t.entry,t.sl,t.target,t.exit||'',t.result,t.pnl||'',t.rrr||'',(t.rule||''),(t.mistakes||[]).join('|'),'"'+(t.notes||'').replace(/"/g,"'")+'"']);
+  const h=['Date','Stock','Type','Segment','Exchange','Entry','SL','Target','Exit','GrossPnL','Brokerage','OtherCharges','TotalCharges','NetPnL','RRR','Rule','Mistakes','Notes'];
+  const rows=trades.map(t=>[t.date,t.stock,t.type,t.segment||'',t.exchange||'',t.entry,t.sl,t.target,t.exit||'',t.pnl||'',t.charges?t.charges.brokerage:'',t.charges?t.charges.otherCharges:'',t.charges?t.charges.total:'',t.netPnl!=null?t.netPnl:'',t.rrr||'',(t.rule||''),(t.mistakes||[]).join('|'),'"'+(t.notes||'').replace(/"/g,"'")+'"']);
   const a=document.createElement('a');
   a.href=URL.createObjectURL(new Blob([[h,...rows].map(r=>r.join(',')).join('\n')],{type:'text/csv'}));
   a.download='vikram_journal.csv';a.click();
